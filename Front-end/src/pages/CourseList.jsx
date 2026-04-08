@@ -25,7 +25,8 @@ import {
     Stack,
     Card,
     CardContent,
-    CircularProgress
+    CircularProgress,
+    Divider
 } from '@mui/material';
 import {
     MdSearch,
