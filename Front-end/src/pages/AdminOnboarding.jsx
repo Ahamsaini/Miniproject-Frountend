@@ -26,7 +26,9 @@ import {
     Fade,
     Zoom,
     Tab,
-    Tabs
+    Tabs,
+    Stack,
+    Divider
 } from '@mui/material';
 import {
     MdVisibility,

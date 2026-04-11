@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: window.APP_CONFIG?.API_BASE_URL || 'https://miniproject-backend-production-6861.up.railway.app/api',
+  // baseURL: window.APP_CONFIG?.API_BASE_URL || 'https://miniproject-backend-production-6861.up.railway.app/api',
+  baseURL: window.APP_CONFIG?.API_BASE_URL || 'http://localhost:8080/api',
   headers: {
     'Content-Type': 'application/json',
   },
