@@ -13,6 +13,7 @@ import LabSessionList from './pages/LabSessionList';
 import LabSessionForm from './pages/LabSessionForm';
 import LabRecordHistory from './pages/LabRecordHistory';
 import SessionControl from './pages/SessionControl';
+import CodeSubmission from './pages/CodeSubmission';
 import StudentLabHistory from './pages/StudentLabHistory';
 import StudentList from './pages/StudentList';
 import LabForm from './pages/LabForm';
@@ -64,6 +65,7 @@ function App() {
         <Route path="labs/reschedule/:id" element={<LabSessionForm />} />
         <Route path="labs/history" element={<LabRecordHistory />} />
         <Route path="labs/session/:sessionId" element={<SessionControl />} />
+        <Route path="labs/verify/:sessionId" element={<CodeSubmission />} />
         <Route path="my-history" element={<StudentLabHistory />} />
         <Route path="onboarding" element={<AdminOnboarding />} />
         <Route path="students" element={<StudentList />} />

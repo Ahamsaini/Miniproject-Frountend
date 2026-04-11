@@ -101,13 +101,6 @@ const TeacherDashboard = () => {
         dispatch(generateCode({ sessionId, type }));
     };
 
-    const handleStartLab = async (sessionId) => {
-        // Generate entry code to activate the session
-        await dispatch(generateCode({ sessionId, type: 'entry' }));
-        // Navigate to the control hub
-        navigate(`/labs/session/${sessionId}`);
-    };
-
     const currentCodes = (sessionId) => activeCodes[sessionId] || {};
 
     if (labsLoading && !sessions.length) {
@@ -817,17 +810,16 @@ const TeacherDashboard = () => {
                                                         <Button
                                                             fullWidth
                                                             variant={isReady ? "contained" : "outlined"}
-                                                            onClick={() => isReady ? handleStartLab(session.id) : navigate(`/labs/session/${session.id}`)}
+                                                            onClick={() => navigate(`/labs/session/${session.id}`)}
                                                             sx={{
                                                                 borderRadius: universityTheme.borderRadius.lg,
                                                                 textTransform: 'none',
                                                                 bgcolor: isReady ? universityTheme.colors.primary.main : 'transparent',
                                                                 color: isReady ? 'white' : universityTheme.colors.neutral.dark,
                                                                 borderColor: isReady ? 'transparent' : universityTheme.colors.neutral.light,
-                                                                fontWeight: universityTheme.typography.fontWeight.bold,
                                                             }}
                                                         >
-                                                            {isReady ? 'Start Lab' : 'View Details'}
+                                                            {isReady ? 'Start Session' : 'Details'}
                                                         </Button>
                                                     </Box>
                                                 </CardContent>

@@ -36,16 +36,13 @@ import {
     MdExitToApp,
     MdOutlineVpnKey,
     MdDashboard,
-    MdTimelapse,
-    MdComputer,
-    MdWarning
+    MdTimelapse
 } from 'react-icons/md';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchStudentAttendanceSummary } from '../features/students/studentsSlice';
-import { fetchActiveSessionForStudent, fetchDailySessionsForStudent, fetchTodayAttendance, submitAttendanceCode, clearLabError } from '../features/labs/labsSlice';
+import { fetchActiveSessionForStudent, fetchDailySessionsForStudent, fetchTodayAttendance, submitAttendanceCode } from '../features/labs/labsSlice';
 import universityTheme from '../theme/universityTheme';
-import axiosInstance from '../api/axiosInstance';
 
 import {
     ResponsiveContainer,
@@ -72,15 +69,9 @@ const StudentDashboard = () => {
     const [mounted, setMounted] = useState(false);
 
     const [openExit, setOpenExit] = React.useState(false);
-    const [openJoin, setOpenJoin] = React.useState(false);
     const [selectedSession, setSelectedSession] = React.useState(null);
     const [exitCode, setExitCode] = React.useState(['', '', '', '', '', '']);
-    const [entryCode, setEntryCode] = React.useState(['', '', '', '', '', '']);
-    const [pcNumber, setPcNumber] = React.useState('');
-    const [occupiedComputers, setOccupiedComputers] = React.useState([]);
-    const [loadingOccupied, setLoadingOccupied] = React.useState(false);
     const [exitError, setExitError] = React.useState(null);
-    const [joinError, setJoinError] = React.useState(null);
 
     useEffect(() => {
         setMounted(true);
@@ -91,25 +82,6 @@ const StudentDashboard = () => {
             dispatch(fetchTodayAttendance(user.id));
         }
     }, [dispatch, user]);
-
-    useEffect(() => {
-        const fetchOccupied = async () => {
-            if (!studentActiveSession?.id) return;
-            setLoadingOccupied(true);
-            try {
-                const res = await axiosInstance.get(`/labs/sessions/${studentActiveSession.id}/occupied-computers`);
-                setOccupiedComputers(res.data || []);
-            } catch (err) {
-                console.error('Failed to fetch occupied computers');
-            } finally {
-                setLoadingOccupied(false);
-            }
-        };
-
-        if (openJoin && studentActiveSession) {
-            fetchOccupied();
-        }
-    }, [openJoin, studentActiveSession]);
 
     const handleExitCodeInput = (index, value) => {
         if (value.length > 1) return;
@@ -141,51 +113,6 @@ const StudentDashboard = () => {
             dispatch(fetchTodayAttendance(user.id)); // Refresh status
         } else {
             setExitError(result.payload);
-        }
-    };
-
-    const handleEntryCodeInput = (index, value) => {
-        if (value.length > 1) return;
-        const newCode = [...entryCode];
-        newCode[index] = value.toUpperCase();
-        setEntryCode(newCode);
-
-        if (value && index < 5) {
-            const nextInput = document.getElementById(`entry-code-${index + 1}`);
-            if (nextInput) nextInput.focus();
-        }
-    };
-
-    const handleJoinSubmit = async () => {
-        const codeString = entryCode.join('');
-        if (codeString.length < 6) return;
-
-        if (!pcNumber) {
-            setJoinError('Please enter your Machine / Bench number');
-            return;
-        }
-
-        if (occupiedComputers.some(pc => pc.toLowerCase() === pcNumber.toLowerCase())) {
-            setJoinError('This computer is already occupied. Please use a different machine.');
-            return;
-        }
-
-        setJoinError(null);
-        const result = await dispatch(submitAttendanceCode({
-            sessionId: studentActiveSession.id,
-            code: codeString,
-            type: 'ENTRY',
-            studentId: user?.id,
-            pcNumber: pcNumber
-        }));
-
-        if (!result.error) {
-            setOpenJoin(false);
-            setEntryCode(['', '', '', '', '', '']);
-            setPcNumber('');
-            dispatch(fetchTodayAttendance(user.id)); // Refresh status
-        } else {
-            setJoinError(result.payload);
         }
     };
 
@@ -381,7 +308,7 @@ const StudentDashboard = () => {
                                                         setSelectedSession(studentActiveSession);
                                                         setOpenExit(true);
                                                     } else {
-                                                        setOpenJoin(true);
+                                                        navigate(`/labs/verify/${studentActiveSession.id}`);
                                                     }
                                                 }}
                                                 sx={{
@@ -730,7 +657,7 @@ const StudentDashboard = () => {
                                                                 <Button
                                                                     variant="contained"
                                                                     size="small"
-                                                                    onClick={() => { if (hasJoined) { setSelectedSession(session); setOpenExit(true); } else { setOpenJoin(true); } }}
+                                                                    onClick={() => { if (hasJoined) { setSelectedSession(session); setOpenExit(true); } else { navigate(`/labs/verify/${session.id}`); } }}
                                                                     sx={{
                                                                         bgcolor: hasJoined ? universityTheme.colors.secondary.main : '#22c55e',
                                                                         color: hasJoined ? 'black' : 'white',
@@ -821,118 +748,6 @@ const StudentDashboard = () => {
                             <Button
                                 fullWidth
                                 onClick={() => setOpenExit(false)}
-                                sx={{
-                                    color: universityTheme.colors.neutral.medium,
-                                    fontWeight: 600,
-                                    textTransform: 'none'
-                                }}
-                            >
-                                Cancel
-                            </Button>
-                        </DialogActions>
-                    </Dialog>
-
-                    {/* Join Dialog */}
-                    <Dialog open={openJoin} onClose={() => setOpenJoin(false)} PaperProps={{ sx: { borderRadius: universityTheme.borderRadius.xl, p: 2, maxWidth: 450 } }}>
-                        <DialogTitle sx={{ textAlign: 'center', pt: 2 }}>
-                            <Avatar sx={{ bgcolor: `${universityTheme.colors.primary.main}15`, color: universityTheme.colors.primary.main, width: 64, height: 64, mx: 'auto', mb: 2 }}>
-                                <MdOutlineVpnKey size={32} />
-                            </Avatar>
-                            <Typography variant="h5" sx={{ fontWeight: 800, color: universityTheme.colors.neutral.dark }}>
-                                Lab Session Entry
-                            </Typography>
-                        </DialogTitle>
-                        <DialogContent>
-                            <Box sx={{ textAlign: 'center', mb: 4 }}>
-                                <Typography variant="body2" sx={{ color: universityTheme.colors.neutral.medium, mb: 1 }}>
-                                    You are joining: <strong>{studentActiveSession?.subject?.subjectName}</strong>
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: universityTheme.colors.neutral.medium }}>
-                                    Enter your machine number and the 6-digit entry code.
-                                </Typography>
-                            </Box>
-
-                            {joinError && <Alert severity="error" sx={{ mb: 3, borderRadius: universityTheme.borderRadius.lg }}>{joinError}</Alert>}
-
-                            <Box sx={{ mb: 4 }}>
-                                <TextField
-                                    fullWidth
-                                    label="Machine / Bench Number"
-                                    variant="outlined"
-                                    placeholder="e.g., M-24"
-                                    value={pcNumber}
-                                    onChange={(e) => setPcNumber(e.target.value)}
-                                    error={pcNumber && occupiedComputers.some(pc => pc.toLowerCase() === pcNumber.toLowerCase())}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            borderRadius: universityTheme.borderRadius.lg,
-                                            fontWeight: 'bold',
-                                        }
-                                    }}
-                                    helperText={loadingOccupied ? 'Checking availability...' : `${occupiedComputers.length} machine(s) currently occupied`}
-                                />
-                                {occupiedComputers.length > 0 && (
-                                    <Box sx={{ mt: 2, p: 2, bgcolor: '#fff7ed', borderRadius: universityTheme.borderRadius.lg, border: '1px solid #ffedd5' }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                            <MdWarning size={14} color="#ea580c" />
-                                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#9a3412', textTransform: 'uppercase' }}>Occupied</Typography>
-                                        </Box>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {occupiedComputers.map((pc, idx) => (
-                                                <Chip key={idx} label={pc} size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#ffedd5', color: '#9a3412' }} />
-                                            ))}
-                                        </Box>
-                                    </Box>
-                                )}
-                            </Box>
-
-                            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, textAlign: 'center' }}>ENTRY CODE</Typography>
-                            <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1 }}>
-                                {entryCode.map((digit, i) => (
-                                    <TextField
-                                        key={i}
-                                        id={`entry-code-${i}`}
-                                        value={digit}
-                                        onChange={(e) => handleEntryCodeInput(i, e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Backspace' && !entryCode[i] && i > 0) {
-                                                document.getElementById(`entry-code-${i - 1}`).focus();
-                                            }
-                                        }}
-                                        variant="outlined"
-                                        sx={{
-                                            width: '45px',
-                                            '& .MuiOutlinedInput-root': {
-                                                borderRadius: universityTheme.borderRadius.lg,
-                                                fontWeight: 'bold',
-                                                fontSize: '1.25rem',
-                                                bgcolor: universityTheme.colors.neutral.background
-                                            },
-                                            '& input': { textAlign: 'center', p: 1.5 }
-                                        }}
-                                        inputProps={{ maxLength: 1 }}
-                                    />
-                                ))}
-                            </Stack>
-                        </DialogContent>
-                        <DialogActions sx={{ flexDirection: 'column', gap: 1, px: 3, pb: 3 }}>
-                            <Button
-                                fullWidth
-                                variant="contained"
-                                onClick={handleJoinSubmit}
-                                disabled={entryCode.join('').length < 6 || !pcNumber || labsLoading}
-                                sx={{
-                                    bgcolor: universityTheme.colors.primary.main,
-                                    borderRadius: universityTheme.borderRadius.lg,
-                                    py: 1.5,
-                                    fontWeight: 'bold',
-                                }}
-                            >
-                                {labsLoading ? <CircularProgress size={24} color="inherit" /> : 'CONFIRM ARRIVAL'}
-                            </Button>
-                            <Button
-                                fullWidth
-                                onClick={() => setOpenJoin(false)}
                                 sx={{
                                     color: universityTheme.colors.neutral.medium,
                                     fontWeight: 600,

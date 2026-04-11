@@ -73,44 +73,38 @@ const AdminDashboard = () => {
 
     // Data Processing for Charts
     const sessionData = useMemo(() => {
-        // Prefer data from dashboard stats API if available
-        if (dashboardStats?.sessionData && dashboardStats.sessionData.length > 0) {
-            return dashboardStats.sessionData;
-        }
-
         if (!allSessions || allSessions.length === 0) return [];
 
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
+
         const weekData = days.map(day => ({ name: day, sessions: 0, students: 0 }));
 
         allSessions.forEach(session => {
-            if (!session.sessionDate) return;
-            // Parse date manually to avoid timezone shifts for YYYY-MM-DD
-            const [year, month, day] = session.sessionDate.split('-').map(Number);
-            const date = new Date(year, month - 1, day);
+            const date = new Date(session.sessionDate);
+            // Check if session is within the current week (simplified check)
+            // Ideally we check exact dates, but for now filtering by last 7 days from dataset might be enough
+            // Let's just map the day of week for all recent sessions
             const dayIndex = date.getDay();
             if (weekData[dayIndex]) {
                 weekData[dayIndex].sessions += 1;
-                weekData[dayIndex].students += (session.presentCount || 0);
+                weekData[dayIndex].students += (session.presentCount || 0); // Use present count or total students
             }
         });
 
+        // Reorder to start from Monday if needed, or keep Sun-Sat
         return [...weekData.slice(1), weekData[0]]; // Mon-Sun
-    }, [allSessions, dashboardStats]);
+    }, [allSessions]);
 
     const attendanceTrend = useMemo(() => {
-        // Prefer data from dashboard stats API if available
-        if (dashboardStats?.attendanceTrend && dashboardStats.attendanceTrend.length > 0) {
-            return dashboardStats.attendanceTrend;
-        }
-
         if (!allSessions || allSessions.length === 0) return [];
 
         // Group by date, last 7 unique dates
         const dateMap = {};
         allSessions.forEach(session => {
-            if (session.status === 'COMPLETED' && session.sessionDate) {
+            if (session.status === 'COMPLETED') {
                 const date = session.sessionDate; // YYYY-MM-DD
                 if (!dateMap[date]) {
                     dateMap[date] = { date, totalPercentage: 0, count: 0 };
@@ -124,20 +118,16 @@ const AdminDashboard = () => {
         });
 
         const trend = Object.values(dateMap)
-            .map(d => {
-                const [year, month, day] = d.date.split('-').map(Number);
-                const dateObj = new Date(year, month - 1, day);
-                return {
-                    date: dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                    percentage: Math.round(d.totalPercentage / d.count),
-                    rawDate: d.date
-                };
-            })
+            .map(d => ({
+                date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                percentage: Math.round(d.totalPercentage / d.count),
+                rawDate: d.date
+            }))
             .sort((a, b) => new Date(a.rawDate) - new Date(b.rawDate))
             .slice(-7); // Last 7 days with data
 
         return trend.length > 0 ? trend : [{ date: 'Today', percentage: 0 }];
-    }, [allSessions, dashboardStats]);
+    }, [allSessions]);
 
     const userDistData = useMemo(() => {
         return [
